@@ -95,14 +95,13 @@ fn show_system() {
         }
     );
 
-    if let Some(contents) = read_file("/proc/uptime") {
-        if let Some(seconds) = contents
+    if let Some(contents) = read_file("/proc/uptime")
+        && let Some(seconds) = contents
             .split_whitespace()
             .next()
             .and_then(|value| value.parse::<f64>().ok())
-        {
-            println!("Время работы:    {}", format_uptime(seconds as u64));
-        }
+    {
+        println!("Время работы:    {}", format_uptime(seconds as u64));
     }
 }
 

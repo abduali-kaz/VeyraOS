@@ -309,6 +309,7 @@ fn print_help() {
     println!("Veyra Installer");
     println!();
     println!("  veyra install --list-disks");
+    println!("  veyra install --plan-disk /dev/vda");
     println!("  veyra install --dry-run");
     println!("  veyra install --preflight");
     println!("  veyra install --preflight --target /mnt/veyra");
@@ -397,6 +398,7 @@ pub fn run(args: Vec<String>) -> ExitCode {
     let mut config = default_config_path();
     let mut target: Option<String> = None;
     let mut list_disks = false;
+    let mut plan_disk: Option<String> = None;
     let mut dry_run = false;
     let mut preflight = false;
     let mut execute = false;
@@ -415,7 +417,7 @@ pub fn run(args: Vec<String>) -> ExitCode {
             "--preflight" => preflight = true,
             "--execute" => execute = true,
 
-            "--config" | "--target" => {
+            "--config" | "--target" | "--plan-disk" => {
                 let option = args[i].clone();
                 i += 1;
 
@@ -426,8 +428,10 @@ pub fn run(args: Vec<String>) -> ExitCode {
 
                 if option == "--config" {
                     config = args[i].clone();
-                } else {
+                } else if option == "--target" {
                     target = Some(args[i].clone());
+                } else {
+                    plan_disk = Some(args[i].clone());
                 }
             }
 
@@ -439,6 +443,14 @@ pub fn run(args: Vec<String>) -> ExitCode {
         }
 
         i += 1;
+    }
+
+    if let Some(device) = plan_disk.as_deref() {
+        if list_disks || dry_run || preflight || execute || target.is_some() {
+            eprintln!("Используй --plan-disk отдельно от других режимов.");
+            return ExitCode::from(2);
+        }
+        return crate::disk_plan::run(device);
     }
 
     if list_disks {

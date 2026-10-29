@@ -1,8 +1,10 @@
 mod diagnostics;
+mod disk_plan;
 mod install_engine;
 mod installer;
 mod recovery;
 mod repository;
+mod rescue;
 mod setup;
 mod status;
 mod storage;
@@ -29,6 +31,7 @@ fn main() -> ExitCode {
                     arg.as_str(),
                     "--dry-run"
                         | "--list-disks"
+                        | "--plan-disk"
                         | "--preflight"
                         | "--execute"
                         | "--target"
@@ -46,6 +49,7 @@ fn main() -> ExitCode {
         Some("storage") => storage::run(),
         Some("diagnose") => diagnostics::run(),
         Some("recovery") => recovery::run(),
+        Some("rescue") => rescue::run(args.collect()),
         Some("repo") => repository::run(args.collect()),
         Some("--version") | Some("-V") => {
             println!("Veyra Core {}", env!("CARGO_PKG_VERSION"));
@@ -71,8 +75,10 @@ fn show_help() {
     println!("  veyra setup                    Мастер настройки Veyra");
     println!("  veyra storage                  Просмотр дисков и разделов");
     println!("  veyra install --list-disks     Список дисков для установки");
+    println!("  veyra install --plan-disk /dev/vda  План разметки без записи");
     println!("  veyra diagnose                 Диагностика системы");
     println!("  veyra recovery                 Проверка восстановления системы");
+    println!("  veyra rescue inspect --root /mnt/target  Диагностика Linux-системы");
     println!("  veyra repo status              Состояние репозитория Veyra");
     println!("  veyra install --dry-run       Проверка плана установки");
     println!("  veyra search <слово>           Поиск программ");
