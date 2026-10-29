@@ -1,0 +1,12 @@
+/target/
+/work/
+/out/
+*.iso
+*.pkg.tar.*
+*.bak
+.env
+.env.*
+!.env.example
+/config/veyra-install.toml
+
+/iso/profile/airootfs/usr/local/bin/veyra

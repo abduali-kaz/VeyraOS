@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Veyra Health
+GenericName=System Diagnostics
+Comment=Check system health using Veyra Core
+Exec=konsole --hold -e /usr/local/bin/veyra status
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;
