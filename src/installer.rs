@@ -2,13 +2,13 @@ use std::fs;
 use std::path::{Component, Path};
 use std::process::{Command, ExitCode};
 
-struct InstallPlan {
-    hostname: String,
-    username: String,
-    timezone: String,
-    locale: String,
-    profile: String,
-    packages: Vec<String>,
+pub(crate) struct InstallPlan {
+    pub(crate) hostname: String,
+    pub(crate) username: String,
+    pub(crate) timezone: String,
+    pub(crate) locale: String,
+    pub(crate) profile: String,
+    pub(crate) packages: Vec<String>,
 }
 
 fn read_field(text: &str, key: &str) -> Result<String, String> {
@@ -160,7 +160,17 @@ fn load_plan(path: &str) -> Result<InstallPlan, String> {
         return Err("Неизвестный профиль установки".into());
     }
 
-    for required in ["base", "linux", "sudo", "networkmanager", "sddm"] {
+    for required in [
+        "base",
+        "linux",
+        "linux-firmware",
+        "grub",
+        "efibootmgr",
+        "sudo",
+        "networkmanager",
+        "plasma-desktop",
+        "sddm",
+    ] {
         if !plan.packages.iter().any(|p| p == required) {
             return Err(format!(
                 "В плане отсутствует обязательный пакет: {required}"
@@ -182,7 +192,35 @@ fn executable_exists(name: &str) -> bool {
     })
 }
 
-fn check_target(target: &str) -> Result<(), String> {
+fn validate_target_location(canonical: &Path) -> Result<(), String> {
+    if canonical.parent() != Some(Path::new("/mnt")) || canonical.file_name().is_none() {
+        return Err(
+            "Целевой раздел должен быть смонтирован непосредственно в /mnt/<имя>, например /mnt/veyra.".into()
+        );
+    }
+    Ok(())
+}
+
+fn conflicting_mountpoint(mounts: &str, target_device: &str, target_mount: &str) -> Option<String> {
+    let target_prefix = format!("{}/", target_mount.trim_end_matches('/'));
+
+    mounts.lines().find_map(|line| {
+        let mut fields = line.split_whitespace();
+        let device = fields.next()?;
+        let mountpoint = fields.next()?;
+
+        if device == target_device
+            && mountpoint != target_mount
+            && !mountpoint.starts_with(&target_prefix)
+        {
+            Some(mountpoint.to_string())
+        } else {
+            None
+        }
+    })
+}
+
+pub(crate) fn check_target(target: &str) -> Result<(), String> {
     let path = Path::new(target);
 
     if !path.is_absolute() || path.components().any(|c| c == Component::ParentDir) {
@@ -196,6 +234,7 @@ fn check_target(target: &str) -> Result<(), String> {
     if canonical == Path::new("/") {
         return Err("Запрещено выбирать корень текущей системы".into());
     }
+    validate_target_location(&canonical)?;
 
     if !canonical.is_dir() {
         return Err("Целевой путь не является каталогом".into());
@@ -225,6 +264,43 @@ fn check_target(target: &str) -> Result<(), String> {
         ));
     }
 
+    let target_device = Command::new("findmnt")
+        .args(["-n", "-o", "MAJ:MIN", "--mountpoint"])
+        .arg(&canonical)
+        .output()
+        .map_err(|e| format!("Не удалось определить целевой раздел: {e}"))?;
+
+    if !target_device.status.success() {
+        return Err("Не удалось определить устройство целевого раздела.".into());
+    }
+
+    let target_device = String::from_utf8_lossy(&target_device.stdout)
+        .trim()
+        .to_string();
+
+    if target_device.is_empty() {
+        return Err("Устройство целевого раздела не определено.".into());
+    }
+
+    let mounts = Command::new("findmnt")
+        .args(["-rn", "-o", "MAJ:MIN,TARGET"])
+        .output()
+        .map_err(|e| format!("Не удалось проверить подключённые файловые системы: {e}"))?;
+
+    if !mounts.status.success() {
+        return Err("Не удалось проверить подключённые файловые системы.".into());
+    }
+
+    let mounts = String::from_utf8_lossy(&mounts.stdout);
+    let target_mount = canonical.to_string_lossy();
+
+    if let Some(existing) = conflicting_mountpoint(&mounts, &target_device, &target_mount) {
+        return Err(format!(
+            "Целевая файловая система уже используется в точке '{}'. Установка запрещена.",
+            existing
+        ));
+    }
+
     println!("Целевой раздел смонтирован: {}", canonical.display());
     Ok(())
 }
@@ -232,19 +308,62 @@ fn check_target(target: &str) -> Result<(), String> {
 fn print_help() {
     println!("Veyra Installer");
     println!();
-    println!("  cargo run -- install --dry-run");
-    println!("  cargo run -- install --preflight");
-    println!("  cargo run -- install --preflight --target /mnt/veyra");
-    println!("  cargo run -- install --dry-run --config config/veyra-install.toml");
+    println!("  veyra install --dry-run");
+    println!("  veyra install --preflight");
+    println!("  veyra install --preflight --target /mnt/veyra");
+    println!("  sudo veyra install --execute --target /mnt/veyra");
+    println!("  veyra install --dry-run --config ~/.config/veyra/veyra-install.toml");
     println!();
-    println!("Реальная установка пока не реализована.");
+    println!("--execute устанавливает систему в заранее подготовленный раздел.");
+    println!("Разделы не форматируются автоматически.");
+    println!("Перед реальной установкой обязательно проверь целевые разделы.");
+}
+
+fn default_config_path() -> String {
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+
+    // При запуске через sudo сначала ищем конфигурацию исходного пользователя.
+    if let Ok(user) = std::env::var("SUDO_USER") {
+        if let Ok(output) = Command::new("getent")
+            .args(["passwd", user.as_str()])
+            .output()
+        {
+            if output.status.success() {
+                let passwd = String::from_utf8_lossy(&output.stdout);
+                if let Some(home) = passwd
+                    .lines()
+                    .next()
+                    .and_then(|line| line.split(':').nth(5))
+                {
+                    candidates.push(Path::new(home).join(".config/veyra/veyra-install.toml"));
+                }
+            }
+        }
+    }
+
+    if let Some(home) = std::env::var_os("HOME") {
+        candidates.push(Path::new(&home).join(".config/veyra/veyra-install.toml"));
+    }
+
+    // Совместимость со старой конфигурацией проекта.
+    candidates.push(Path::new("config/veyra-install.toml").to_path_buf());
+
+    if let Some(existing) = candidates.iter().find(|path| path.is_file()) {
+        return existing.display().to_string();
+    }
+
+    candidates
+        .first()
+        .map(|path| path.display().to_string())
+        .unwrap_or_else(|| "config/veyra-install.toml".to_string())
 }
 
 pub fn run(args: Vec<String>) -> ExitCode {
-    let mut config = "config/veyra-install.toml".to_string();
+    let mut config = default_config_path();
     let mut target: Option<String> = None;
     let mut dry_run = false;
     let mut preflight = false;
+    let mut execute = false;
 
     let mut i = 0;
 
@@ -257,6 +376,7 @@ pub fn run(args: Vec<String>) -> ExitCode {
 
             "--dry-run" => dry_run = true,
             "--preflight" => preflight = true,
+            "--execute" => execute = true,
 
             "--config" | "--target" => {
                 let option = args[i].clone();
@@ -284,8 +404,13 @@ pub fn run(args: Vec<String>) -> ExitCode {
         i += 1;
     }
 
-    if dry_run == preflight {
-        eprintln!("Выбери ровно один режим: --dry-run или --preflight.");
+    if [dry_run, preflight, execute]
+        .into_iter()
+        .filter(|v| *v)
+        .count()
+        != 1
+    {
+        eprintln!("Выбери ровно один режим: --dry-run, --preflight или --execute.");
         return ExitCode::from(2);
     }
 
@@ -316,6 +441,10 @@ pub fn run(args: Vec<String>) -> ExitCode {
         println!("Форматирование дисков и установка пока отключены.");
 
         return ExitCode::SUCCESS;
+    }
+
+    if execute {
+        return crate::install_engine::execute(&plan, target.as_deref());
     }
 
     println!("=== VEYRA INSTALLER: PREFLIGHT ===");
@@ -352,7 +481,43 @@ pub fn run(args: Vec<String>) -> ExitCode {
 
     println!();
     println!("Проверки пройдены.");
-    println!("Реальный режим установки пока отключён.");
+    println!("Preflight завершён; фактическая установка не выполнялась.");
 
     ExitCode::SUCCESS
+}
+
+#[cfg(test)]
+mod target_safety_tests {
+    use super::{conflicting_mountpoint, validate_target_location};
+    use std::path::Path;
+
+    #[test]
+    fn accepts_a_named_mount_under_mnt() {
+        assert!(validate_target_location(Path::new("/mnt/veyra")).is_ok());
+    }
+
+    #[test]
+    fn rejects_filesystem_used_elsewhere() {
+        let mounts = "8:2 /\n8:4 /mnt/veyra\n8:4 /home\n8:5 /mnt/veyra/boot\n";
+        assert_eq!(
+            conflicting_mountpoint(mounts, "8:4", "/mnt/veyra").as_deref(),
+            Some("/home")
+        );
+    }
+
+    #[test]
+    fn allows_target_and_its_separate_boot_mount() {
+        let mounts = "8:4 /mnt/veyra\n8:5 /mnt/veyra/boot\n";
+        assert_eq!(conflicting_mountpoint(mounts, "8:4", "/mnt/veyra"), None);
+    }
+
+    #[test]
+    fn rejects_host_system_paths() {
+        for path in ["/", "/home", "/boot", "/mnt", "/tmp/veyra"] {
+            assert!(
+                validate_target_location(Path::new(path)).is_err(),
+                "Путь {path} должен быть отклонён"
+            );
+        }
+    }
 }

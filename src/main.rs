@@ -1,4 +1,7 @@
+mod diagnostics;
+mod install_engine;
 mod installer;
+mod recovery;
 mod repository;
 mod setup;
 mod storage;
@@ -27,7 +30,13 @@ fn main() -> ExitCode {
             if rest.iter().any(|arg| {
                 matches!(
                     arg.as_str(),
-                    "--dry-run" | "--preflight" | "--target" | "--config" | "--help" | "-h"
+                    "--dry-run"
+                        | "--preflight"
+                        | "--execute"
+                        | "--target"
+                        | "--config"
+                        | "--help"
+                        | "-h"
                 )
             }) {
                 installer::run(rest)
@@ -37,6 +46,8 @@ fn main() -> ExitCode {
         }
         Some("setup") => setup::run(),
         Some("storage") => storage::run(),
+        Some("diagnose") => diagnostics::run(),
+        Some("recovery") => recovery::run(),
         Some("repo") => repository::run(args.collect()),
         Some("--version") | Some("-V") => {
             println!("Veyra Core {}", env!("CARGO_PKG_VERSION"));
@@ -61,18 +72,20 @@ fn show_help() {
     println!("  veyra status                   Состояние системы");
     println!("  veyra setup                    Мастер настройки Veyra");
     println!("  veyra storage                  Просмотр дисков и разделов");
+    println!("  veyra diagnose                 Диагностика системы");
+    println!("  veyra recovery                 Проверка восстановления системы");
     println!("  veyra repo status              Состояние репозитория Veyra");
     println!("  veyra install --dry-run       Проверка плана установки");
     println!("  veyra search <слово>           Поиск программ");
     println!("  veyra install <пакет>          Установка пакета");
     println!("  veyra remove <пакет>           Удаление пакета");
-    println!("  veyra update                   Полное обновление Arch");
+    println!("  veyra update                   Обновление системы");
     println!("  veyra info <пакет>             Информация о пакете");
     println!("  veyra list                     Установленные пакеты");
     println!("  veyra pkg search <слово>       Поиск программ");
     println!("  veyra pkg install <пакет>      Установка программ");
     println!("  veyra pkg remove <пакет>       Удаление программы");
-    println!("  veyra pkg update               Полное обновление Arch");
+    println!("  veyra pkg update               Обновление системы");
     println!("  veyra pkg list                 Список установленных пакетов");
     println!("  veyra pkg info <пакет>         Информация о пакете");
     println!("  veyra --version                Версия Veyra Core");
@@ -200,7 +213,7 @@ fn pkg_command(args: Vec<String>) -> ExitCode {
 }
 
 fn package_help() {
-    println!("Veyra Package — начальный интерфейс над pacman");
+    println!("Veyra Package — пакетные команды через pacman");
     println!();
     println!("  veyra pkg search <слово>");
     println!("  veyra pkg install <пакет>");

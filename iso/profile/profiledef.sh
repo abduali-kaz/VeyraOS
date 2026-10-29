@@ -2,9 +2,9 @@
 # shellcheck disable=SC2034
 
 iso_name="veyra"
-iso_label="ARCH_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
+iso_label="VEYRA_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="Veyra OS"
-iso_application="Veyra Linux Live and Rescue"
+iso_application="Veyra OS Live and Rescue"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="arch"
 bootmodes=('bios.syslinux'

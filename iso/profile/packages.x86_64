@@ -152,3 +152,6 @@ noto-fonts
 noto-fonts-emoji
 ttf-dejavu
 partitionmanager
+iptables
+pipewire-jack
+qt6-multimedia-ffmpeg

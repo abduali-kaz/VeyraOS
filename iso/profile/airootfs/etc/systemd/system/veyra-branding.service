@@ -1,0 +1,14 @@
+[Unit]
+Description=Apply Veyra OS live branding
+DefaultDependencies=no
+After=local-fs.target
+Before=multi-user.target display-manager.service
+ConditionPathExists=/etc/veyra-os-release
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/ln -sfn /etc/veyra-os-release /etc/os-release
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

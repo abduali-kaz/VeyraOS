@@ -8,13 +8,13 @@ fn show_mount(target: &str) {
     }
 
     match Command::new("findmnt")
-        .args(["-n", "-o", "SOURCE,TARGET,FSTYPE", "--target", target])
+        .args(["-n", "-o", "SOURCE,TARGET,FSTYPE", "--mountpoint", target])
         .output()
     {
         Ok(output) if output.status.success() => {
             print!("{target}: {}", String::from_utf8_lossy(&output.stdout));
         }
-        _ => println!("{target}: точку монтирования определить не удалось"),
+        _ => println!("{target}: отдельная точка монтирования не найдена"),
     }
 }
 

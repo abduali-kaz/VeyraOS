@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Veyra Setup
+Name[ru]=Настройка Veyra
+Comment=Configure Veyra OS
+Comment[ru]=Настроить Veyra OS
+Exec=konsole -e /usr/local/bin/veyra setup
+Icon=preferences-system
+Terminal=false
+Categories=System;Settings;
+StartupNotify=true

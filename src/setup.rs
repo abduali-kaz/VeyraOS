@@ -62,6 +62,8 @@ fn packages_for(profile: &str) -> Vec<&'static str> {
         "base",
         "linux",
         "linux-firmware",
+        "grub",
+        "efibootmgr",
         "sudo",
         "networkmanager",
         "plasma-desktop",
@@ -106,8 +108,8 @@ pub fn run() -> ExitCode {
 
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         println!("Veyra Setup — мастер подготовки установки");
-        println!("Запуск: cargo run -- setup");
-        println!("Результат: config/veyra-install.toml");
+        println!("Запуск: veyra setup");
+        println!("Результат: ~/.config/veyra/veyra-install.toml");
         return ExitCode::SUCCESS;
     }
 
@@ -126,7 +128,7 @@ pub fn run() -> ExitCode {
             return Err("Некорректное имя компьютера.".into());
         }
 
-        let username = ask("Имя обычного пользователя", "abdu")?;
+        let username = ask("Имя обычного пользователя", "veyra")?;
         if !valid_username(&username) {
             return Err("Имя пользователя должно начинаться с a-z или _, а далее содержать только a-z, цифры, _ и -.".into());
         }
@@ -175,7 +177,13 @@ pub fn run() -> ExitCode {
             return Ok(());
         }
 
-        fs::create_dir_all("config").map_err(|e| e.to_string())?;
+        let config_path = std::env::var_os("HOME")
+            .map(std::path::PathBuf::from)
+            .ok_or_else(|| "Не задана переменная HOME".to_string())?
+            .join(".config/veyra/veyra-install.toml");
+        if let Some(parent) = config_path.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
 
         let plan = format!(
             "# Veyra OS installation plan\n\
@@ -188,12 +196,14 @@ pub fn run() -> ExitCode {
              packages = [{quoted_packages}]\n"
         );
 
-        fs::write("config/veyra-install.toml", plan)
-            .map_err(|e| format!("Не удалось сохранить план: {e}"))?;
+        fs::write(&config_path, plan).map_err(|e| format!("Не удалось сохранить план: {e}"))?;
 
         println!();
-        println!("План сохранён: config/veyra-install.toml");
-        println!("Следующий этап: применение плана в целевой системе через Veyra Installer.");
+        println!("План сохранён: {}", config_path.display());
+        println!(
+            "План сохранён. Setup сохраняет план. Установщик экспериментальный — сначала проверь его в QEMU."
+        );
+        println!("Проверить план можно командой: veyra install --dry-run");
         Ok(())
     })();
 

@@ -1,0 +1,9 @@
+NAME="Veyra OS"
+PRETTY_NAME="Veyra OS"
+ID=veyra
+ID_LIKE=arch
+ANSI_COLOR="38;2;116;96;255"
+HOME_URL="https://github.com/abduali-kaz/VeyraOS"
+DOCUMENTATION_URL="https://github.com/abduali-kaz/VeyraOS"
+SUPPORT_URL="https://github.com/abduali-kaz/VeyraOS/issues"
+BUG_REPORT_URL="https://github.com/abduali-kaz/VeyraOS/issues"
