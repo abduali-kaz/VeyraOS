@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090b13">
+<meta name="description" content="Veyra OS — an experimental Arch-based Linux distribution with KDE Plasma and Rust-powered system tools.">
+<title>Veyra OS — Your system. Your way.</title>
+<style>
+:root{color-scheme:dark;--bg:#090b13;--panel:#141724;--line:#292c3f;--text:#f5f6ff;--muted:#a0a4bc;--lime:#a5f36b;--violet:#9b8aff}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(ellipse at 75% 0%,#252044 0,transparent 38%),var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,Segoe UI,sans-serif}
+a{color:inherit;text-decoration:none}
+a:focus-visible{outline:2px solid var(--lime);outline-offset:4px}
+.wrap{width:min(1080px,calc(100% - 40px));margin:auto}
+header{height:84px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+nav,.brand,.links{display:flex;align-items:center;gap:22px}
+nav{justify-content:space-between;width:100%}
+.brand{gap:11px;font-weight:800;letter-spacing:.12em}
+.mark{display:grid;place-items:center;width:38px;height:38px;background:var(--lime);color:#090b13;border-radius:12px;font-size:23px;font-weight:900}
+.links{font-size:14px;color:var(--muted)}
+.links a:hover{color:var(--lime)}
+.pill{border:1px solid #7567bb;border-radius:99px;padding:4px 10px;color:#c6bcff;font-size:11px;letter-spacing:.12em}
+.hero{padding:100px 0 76px;display:grid;grid-template-columns:1.15fr .85fr;gap:55px;align-items:center}
+.kicker{font-size:12px;color:var(--lime);font-weight:750;letter-spacing:.2em}
+h1{font-size:clamp(48px,7vw,78px);line-height:1.03;letter-spacing:-.055em;margin:18px 0}
+h1 span{color:var(--lime)}
+p{color:var(--muted)}
+.lead{font-size:18px;max-width:600px}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:13px 19px;border-radius:12px;font-weight:750;border:1px solid var(--line)}
+.primary{background:var(--lime);color:#10140d;border-color:var(--lime)}
+.secondary{background:#141724}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.08)}
+.meta{font-size:12px;color:#858aa5}
+.terminal{background:#10131e;border:1px solid #34364b;border-radius:20px;padding:23px;box-shadow:0 25px 80px #0005;transform:rotate(1deg)}
+.termhead{display:flex;gap:7px;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:18px}
+.dot{width:9px;height:9px;border-radius:50%;background:#555a70}
+.term-label{margin-left:auto;font-size:11px;color:#858aa5}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/2 ui-monospace,SFMono-Regular,monospace;color:#cdd0e2}
+.green{color:var(--lime)}.purple{color:var(--violet)}
+section{padding:72px 0;border-top:1px solid var(--line)}
+.eyebrow{font-size:12px;letter-spacing:.18em;color:var(--lime);font-weight:750}
+h2{font-size:clamp(30px,4vw,44px);line-height:1.15;letter-spacing:-.035em;margin:10px 0}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px}
+.card{background:linear-gradient(145deg,#171a29,#10121c);border:1px solid var(--line);border-radius:18px;padding:25px}
+.icon{font-size:25px;color:var(--lime)}
+.card h3{margin:13px 0 5px}
+.card p{font-size:14px;margin-bottom:0}
+.download{display:grid;grid-template-columns:1fr .85fr;gap:32px;align-items:start}
+.release{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:25px}
+.asset{display:flex;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);font-size:14px}
+.asset:last-child{border-bottom:0}
+.asset a{color:var(--lime);font-weight:700}
+code{font-size:.9em;color:#d5cbff;background:#1d2030;padding:2px 5px;border-radius:5px}
+pre.command{background:#090b13;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:12px;line-height:1.7}
+.notice{font-size:13px;border-left:3px solid var(--violet);padding:5px 0 5px 14px}
+footer{padding:32px 0;color:#858aa5;font-size:13px;border-top:1px solid var(--line)}
+footer .wrap{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap}
+@media(max-width:760px){.hero,.download{grid-template-columns:1fr}.hero{padding:65px 0;gap:35px}.grid{grid-template-columns:1fr}.links{gap:12px;font-size:12px}.terminal{transform:none}h1{font-size:54px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><nav>
+<a class="brand" href="#"><span class="mark">V</span><span>VEYRA OS</span></a>
+<div class="links"><a href="#features">Features</a><a href="#download">Download</a><a href="https://github.com/abduali-kaz/VeyraOS">GitHub ↗</a></div>
+</nav></div></header>
+<main>
+<div class="wrap hero">
+<div>
+<div class="kicker">AN EXPERIMENTAL LINUX DISTRIBUTION</div>
+<h1>Your system.<br><span>Your way.</span></h1>
+<p class="lead">Built on Arch Linux. Shaped by Veyra. Explore a KDE Plasma live desktop with custom Rust system tools, diagnostics and recovery utilities.</p>
+<div class="actions"><a class="btn primary" href="#download">↓ Get Veyra OS</a><a class="btn secondary" href="https://github.com/abduali-kaz/VeyraOS">Explore the source ↗</a></div>
+<div class="meta">VERSION 0.1.0 ALPHA 1 · x86_64 · FREE AND OPEN SOURCE</div>
+</div>
+<div class="terminal">
+<div class="termhead"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="term-label">veyra-terminal</span></div>
+<pre><span class="green">abdu@veyra</span> <span class="purple">~</span> $ veyra --version
+Veyra Core 0.1.0
+
+<span class="green">abdu@veyra</span> <span class="purple">~</span> $ veyra recovery
+System diagnostics
+Storage overview
+Service status
+Package manager check
+
+<span class="green">abdu@veyra</span> <span class="purple">~</span> $ <span class="green">_</span></pre>
+</div>
+</div>
+<section id="features"><div class="wrap">
+<div class="eyebrow">WHAT'S INSIDE</div><h2>A Linux playground.</h2>
+<p>Explore the system, inspect your machine and help shape an early-stage distribution.</p>
+<div class="grid">
+<article class="card"><div class="icon">◈</div><h3>KDE Plasma Live</h3><p>A graphical desktop environment to explore Veyra without installing it to your computer.</p></article>
+<article class="card"><div class="icon">⌘</div><h3>Veyra Core</h3><p>Rust-based command-line utilities for system status, setup, storage inspection and package information.</p></article>
+<article class="card"><div class="icon">↻</div><h3>Recovery tools</h3><p>Read-only diagnostic reports for boot mode, mounted filesystems, services and system logs.</p></article>
+</div>
+</div></section>
+<section id="download"><div class="wrap download">
+<div><div class="eyebrow">TRY THE ALPHA</div><h2>Meet Veyra OS.</h2>
+<p>Download the ISO parts from GitHub Releases, verify them and join them into one image.</p>
+<p class="meta">RELEASE v0.1.0-alpha.1 · 29 OCT 2026 · x86_64</p>
+<a class="btn primary" href="https://github.com/abduali-kaz/VeyraOS/releases/tag/v0.1.0-alpha.1">Open all release files ↗</a>
+<p class="notice">This is an experimental alpha. Test installation in a virtual machine first. Do not install on a computer containing important data.</p>
+</div>
+<div class="release"><h3>Download assets</h3>
+<div class="asset"><span>ISO part 1 · 1.8 GB</span><a href="https://github.com/abduali-kaz/VeyraOS/releases/download/v0.1.0-alpha.1/veyra-2026.10.29-x86_64.iso.part-00">Download ↓</a></div>
+<div class="asset"><span>ISO part 2 · 404 MB</span><a href="https://github.com/abduali-kaz/VeyraOS/releases/download/v0.1.0-alpha.1/veyra-2026.10.29-x86_64.iso.part-01">Download ↓</a></div>
+<div class="asset"><span>Part checksums</span><a href="https://github.com/abduali-kaz/VeyraOS/releases/download/v0.1.0-alpha.1/SHA256SUMS.parts">SHA256SUMS</a></div>
+<div class="asset"><span>Full ISO checksum</span><a href="https://github.com/abduali-kaz/VeyraOS/releases/download/v0.1.0-alpha.1/ISO-SHA256.txt">SHA-256</a></div>
+<h3>Join the parts on Linux</h3>
+<pre class="command">sha256sum -c SHA256SUMS.parts
+cat veyra-2026.10.29-x86_64.iso.part-00 veyra-2026.10.29-x86_64.iso.part-01 > veyra.iso
+sha256sum veyra.iso</pre>
+<p class="meta">Compare the final hash with ISO-SHA256.txt.</p>
+</div>
+</div></section>
+</div>
+</main>
+<footer><div class="wrap"><span>© 2026 Veyra OS · Independent open-source project</span><span><a href="https://github.com/abduali-kaz/VeyraOS">Source code</a> · <a href="https://github.com/abduali-kaz/VeyraOS/issues">Report an issue</a></span></div></footer>
+</body>
+</html>
