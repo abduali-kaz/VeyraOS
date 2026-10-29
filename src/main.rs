@@ -4,9 +4,9 @@ mod installer;
 mod recovery;
 mod repository;
 mod setup;
+mod status;
 mod storage;
 use std::env;
-use std::fs;
 use std::process::{Command, ExitCode};
 
 fn main() -> ExitCode {
@@ -14,10 +14,7 @@ fn main() -> ExitCode {
     let command = args.next();
 
     match command.as_deref() {
-        Some("status") => {
-            show_status();
-            ExitCode::SUCCESS
-        }
+        Some("status") => status::run(),
         Some("pkg") => pkg_command(args.collect()),
         Some("search") => pkg_command(std::iter::once("search".to_string()).chain(args).collect()),
         Some("remove") => pkg_command(std::iter::once("remove".to_string()).chain(args).collect()),
@@ -221,103 +218,4 @@ fn package_help() {
     println!("  veyra pkg update");
     println!("  veyra pkg list");
     println!("  veyra pkg info <пакет>");
-}
-
-fn output(program: &str, args: &[&str]) -> Option<String> {
-    let result = Command::new(program).args(args).output().ok()?;
-
-    if !result.status.success() {
-        return None;
-    }
-
-    Some(String::from_utf8_lossy(&result.stdout).trim().to_string())
-}
-
-fn os_name() -> String {
-    fs::read_to_string("/etc/os-release")
-        .ok()
-        .and_then(|contents| {
-            contents.lines().find_map(|line| {
-                line.strip_prefix("PRETTY_NAME=")
-                    .map(|value| value.trim_matches('"').to_string())
-            })
-        })
-        .unwrap_or_else(|| "Неизвестная Linux-система".to_string())
-}
-
-fn show_status() {
-    println!();
-    println!("==================================");
-    println!("       VEYRA SYSTEM STATUS");
-    println!("==================================");
-    println!("Операционная система: {}", os_name());
-
-    let hostname = fs::read_to_string("/etc/hostname")
-        .map(|name| name.trim().to_string())
-        .unwrap_or_else(|_| "неизвестно".to_string());
-    println!("Имя компьютера:      {hostname}");
-
-    println!(
-        "Версия ядра:         {}",
-        output("uname", &["-r"]).unwrap_or_else(|| "недоступна".into())
-    );
-
-    if let Ok(contents) = fs::read_to_string("/proc/uptime") {
-        if let Some(seconds) = contents
-            .split_whitespace()
-            .next()
-            .and_then(|value| value.parse::<f64>().ok())
-        {
-            let total = seconds as u64;
-            println!(
-                "Время работы:        {} д. {} ч. {} мин.",
-                total / 86_400,
-                (total % 86_400) / 3_600,
-                (total % 3_600) / 60
-            );
-        }
-    }
-
-    if let Ok(contents) = fs::read_to_string("/proc/meminfo") {
-        let get_kib = |key: &str| -> Option<u64> {
-            contents.lines().find_map(|line| {
-                let (name, value) = line.split_once(':')?;
-
-                if name == key {
-                    value.split_whitespace().next()?.parse().ok()
-                } else {
-                    None
-                }
-            })
-        };
-
-        if let (Some(total), Some(available)) = (get_kib("MemTotal"), get_kib("MemAvailable")) {
-            let gib = 1024.0 * 1024.0;
-            let used = total.saturating_sub(available);
-
-            println!(
-                "Оперативная память: {:.2} / {:.2} GiB",
-                used as f64 / gib,
-                total as f64 / gib
-            );
-        }
-    }
-
-    if let Ok(contents) = fs::read_to_string("/proc/loadavg") {
-        let values: Vec<&str> = contents.split_whitespace().take(3).collect();
-
-        if !values.is_empty() {
-            println!("Средняя нагрузка:   {}", values.join(" "));
-        }
-    }
-
-    println!("\nКорневой раздел:");
-
-    match output("df", &["-h", "/"]) {
-        Some(disk) => println!("{disk}"),
-        None => println!("Не удалось получить информацию о диске."),
-    }
-
-    println!("==================================");
-    println!("Диагностика Veyra: базовый режим\n");
 }
