@@ -308,6 +308,7 @@ pub(crate) fn check_target(target: &str) -> Result<(), String> {
 fn print_help() {
     println!("Veyra Installer");
     println!();
+    println!("  veyra install --list-disks");
     println!("  veyra install --dry-run");
     println!("  veyra install --preflight");
     println!("  veyra install --preflight --target /mnt/veyra");
@@ -319,25 +320,59 @@ fn print_help() {
     println!("Перед реальной установкой обязательно проверь целевые разделы.");
 }
 
+fn show_disks() -> ExitCode {
+    println!("=== VEYRA INSTALLER: ДИСКИ ===");
+    println!("Режим: только чтение. Изменений дисков не выполняется.");
+    println!();
+
+    let result = Command::new("lsblk")
+        .args([
+            "--paths",
+            "--tree",
+            "--output",
+            "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS,MODEL,RM,RO",
+        ])
+        .output();
+
+    match result {
+        Ok(output) if output.status.success() => {
+            print!("{}", String::from_utf8_lossy(&output.stdout));
+            println!();
+            println!("Перед установкой внимательно проверь устройство и разделы.");
+            println!("Эта команда ничего не форматирует и не изменяет.");
+            ExitCode::SUCCESS
+        }
+        Ok(output) => {
+            eprintln!(
+                "Не удалось получить список дисков: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            );
+            ExitCode::FAILURE
+        }
+        Err(error) => {
+            eprintln!("Не удалось запустить lsblk: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
 fn default_config_path() -> String {
     let mut candidates: Vec<std::path::PathBuf> = Vec::new();
 
     // При запуске через sudo сначала ищем конфигурацию исходного пользователя.
-    if let Ok(user) = std::env::var("SUDO_USER") {
-        if let Ok(output) = Command::new("getent")
+    if let Ok(user) = std::env::var("SUDO_USER")
+        && let Ok(output) = Command::new("getent")
             .args(["passwd", user.as_str()])
             .output()
+        && output.status.success()
+    {
+        let passwd = String::from_utf8_lossy(&output.stdout);
+        if let Some(home) = passwd
+            .lines()
+            .next()
+            .and_then(|line| line.split(':').nth(5))
         {
-            if output.status.success() {
-                let passwd = String::from_utf8_lossy(&output.stdout);
-                if let Some(home) = passwd
-                    .lines()
-                    .next()
-                    .and_then(|line| line.split(':').nth(5))
-                {
-                    candidates.push(Path::new(home).join(".config/veyra/veyra-install.toml"));
-                }
-            }
+            candidates.push(Path::new(home).join(".config/veyra/veyra-install.toml"));
         }
     }
 
@@ -361,6 +396,7 @@ fn default_config_path() -> String {
 pub fn run(args: Vec<String>) -> ExitCode {
     let mut config = default_config_path();
     let mut target: Option<String> = None;
+    let mut list_disks = false;
     let mut dry_run = false;
     let mut preflight = false;
     let mut execute = false;
@@ -374,6 +410,7 @@ pub fn run(args: Vec<String>) -> ExitCode {
                 return ExitCode::SUCCESS;
             }
 
+            "--list-disks" => list_disks = true,
             "--dry-run" => dry_run = true,
             "--preflight" => preflight = true,
             "--execute" => execute = true,
@@ -402,6 +439,14 @@ pub fn run(args: Vec<String>) -> ExitCode {
         }
 
         i += 1;
+    }
+
+    if list_disks {
+        if dry_run || preflight || execute || target.is_some() {
+            eprintln!("Используй --list-disks отдельно от других режимов.");
+            return ExitCode::from(2);
+        }
+        return show_disks();
     }
 
     if [dry_run, preflight, execute]

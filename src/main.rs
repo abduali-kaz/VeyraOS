@@ -28,6 +28,7 @@ fn main() -> ExitCode {
                 matches!(
                     arg.as_str(),
                     "--dry-run"
+                        | "--list-disks"
                         | "--preflight"
                         | "--execute"
                         | "--target"
@@ -69,6 +70,7 @@ fn show_help() {
     println!("  veyra status                   Состояние системы");
     println!("  veyra setup                    Мастер настройки Veyra");
     println!("  veyra storage                  Просмотр дисков и разделов");
+    println!("  veyra install --list-disks     Список дисков для установки");
     println!("  veyra diagnose                 Диагностика системы");
     println!("  veyra recovery                 Проверка восстановления системы");
     println!("  veyra repo status              Состояние репозитория Veyra");
