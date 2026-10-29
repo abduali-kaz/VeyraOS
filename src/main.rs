@@ -1,4 +1,5 @@
 mod installer;
+mod repository;
 mod setup;
 mod storage;
 use std::env;
@@ -15,9 +16,28 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Some("pkg") => pkg_command(args.collect()),
+        Some("search") => pkg_command(std::iter::once("search".to_string()).chain(args).collect()),
+        Some("remove") => pkg_command(std::iter::once("remove".to_string()).chain(args).collect()),
+        Some("update") => pkg_command(std::iter::once("update".to_string()).chain(args).collect()),
+        Some("info") => pkg_command(std::iter::once("info".to_string()).chain(args).collect()),
+        Some("list") => pkg_command(std::iter::once("list".to_string()).chain(args).collect()),
+        Some("install") => {
+            let rest: Vec<String> = args.collect();
+
+            if rest.iter().any(|arg| {
+                matches!(
+                    arg.as_str(),
+                    "--dry-run" | "--preflight" | "--target" | "--config" | "--help" | "-h"
+                )
+            }) {
+                installer::run(rest)
+            } else {
+                pkg_command(std::iter::once("install".to_string()).chain(rest).collect())
+            }
+        }
         Some("setup") => setup::run(),
-        Some("install") => installer::run(args.collect()),
         Some("storage") => storage::run(),
+        Some("repo") => repository::run(args.collect()),
         Some("--version") | Some("-V") => {
             println!("Veyra Core {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
@@ -41,7 +61,14 @@ fn show_help() {
     println!("  veyra status                   Состояние системы");
     println!("  veyra setup                    Мастер настройки Veyra");
     println!("  veyra storage                  Просмотр дисков и разделов");
+    println!("  veyra repo status              Состояние репозитория Veyra");
     println!("  veyra install --dry-run       Проверка плана установки");
+    println!("  veyra search <слово>           Поиск программ");
+    println!("  veyra install <пакет>          Установка пакета");
+    println!("  veyra remove <пакет>           Удаление пакета");
+    println!("  veyra update                   Полное обновление Arch");
+    println!("  veyra info <пакет>             Информация о пакете");
+    println!("  veyra list                     Установленные пакеты");
     println!("  veyra pkg search <слово>       Поиск программ");
     println!("  veyra pkg install <пакет>      Установка программ");
     println!("  veyra pkg remove <пакет>       Удаление программы");
@@ -77,12 +104,23 @@ fn run(program: &str, args: &[String]) -> ExitCode {
 }
 
 fn run_pacman(admin: bool, args: Vec<String>) -> ExitCode {
+    // Используется только при тестировании с отдельным pacman.conf.
+    // В обычной работе берётся системная конфигурация pacman.
+    let mut pacman_args = Vec::new();
+
+    if let Some(config) = env::var_os("VEYRA_PACMAN_CONFIG") {
+        pacman_args.push("--config".to_string());
+        pacman_args.push(config.to_string_lossy().into_owned());
+    }
+
+    pacman_args.extend(args);
+
     if admin {
         let mut sudo_args = vec!["pacman".to_string()];
-        sudo_args.extend(args);
+        sudo_args.extend(pacman_args);
         run("sudo", &sudo_args)
     } else {
-        run("pacman", &args)
+        run("pacman", &pacman_args)
     }
 }
 
